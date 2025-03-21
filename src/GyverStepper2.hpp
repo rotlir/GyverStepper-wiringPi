@@ -83,10 +83,13 @@
 
 #ifndef _GyverStepper2_h
 #define _GyverStepper2_h
-#include <Arduino.h>
+#include <wiringPi.h>
 
-#include "StepperCore.h"
+#include "StepperCore.hpp"
 #define GS_MIN_US 300000  // период, длиннее которого мотор можно резко тормозить или менять скорость
+
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+
 
 template <GS_driverType _DRV, GS_driverType _TYPE = STEPPER_PINS>
 class GStepper2 : public Stepper<_DRV, _TYPE> {
@@ -207,7 +210,7 @@ class GStepper2 : public Stepper<_DRV, _TYPE> {
 
     // установить скорость вращения float
     void setSpeed(double speed) {
-        if (setSpeed((int32_t)speed)) us = 1000000.0 / abs(speed);
+        if (setSpeed((int32_t)speed)) us = 1000000.0 / std::abs(speed);
     }
 
     void setSpeedDeg(int speed) {

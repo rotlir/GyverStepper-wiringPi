@@ -76,9 +76,14 @@
 
 #ifndef _GyverPlanner_h
 #define _GyverPlanner_h
-#include <Arduino.h>
+#include <wiringPi.h>
 
-#include "StepperCore.h"
+#include <cstdint>
+#include <cmath>
+#include "StepperCore.hpp"
+#include "GStypes.hpp"
+
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 
 #define GP_MIN_US 300000  // период, длиннее которого мотор можно резко тормозить или менять скорость
 
@@ -304,7 +309,7 @@ class GPlanner {
         }
         speedAxis = axis;                          // запомнили ось
         steppers[axis]->dir = speed > 0 ? 1 : -1;  // направление
-        us = 1000000.0 / abs(speed);               // период
+        us = 1000000.0 / std::abs(speed);               // период
         us >>= shift;
         status = 3;
     }

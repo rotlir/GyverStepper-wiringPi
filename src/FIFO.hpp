@@ -2,6 +2,9 @@
 
 #ifndef _FIFO_h
 #define _FIFO_h
+
+#include <cstdint>
+
 #define FIFO_WIPE 1
 
 template <typename T, uint16_t SIZE >

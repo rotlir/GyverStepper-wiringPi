@@ -13,6 +13,8 @@
     - Оптимизировано для работы по прерыванию таймера
     - Быстрый контроль пинов шаговика для Arduino AVR
 
+    Ported for Raspberry Pi by rotlir / Портировано rotlir для Raspberry Pi
+
     AlexGyver, alex@alexgyver.ru
     https://alexgyver.ru/
     MIT License
@@ -85,12 +87,15 @@
 
 #ifndef _GyverPlanner2_h
 #define _GyverPlanner2_h
-#include <Arduino.h>
+#include <wiringPi.h>
 
-#include "FIFO.h"
-#include "StepperCore.h"
+#include "FIFO.hpp"
+#include "StepperCore.hpp"
 
 #define GP_MIN_US 300000  // период, длиннее которого мотор можно резко тормозить или менять скорость
+
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+
 
 // создать планировщик с драйверами типа DRV и количеством осей AXLES
 template <GS_driverType _DRV, uint8_t _AXLES, uint8_t _BUF = 32>
@@ -227,7 +232,7 @@ class GPlanner2 {
         }
         speedAxis = axis;                          // запомнили ось
         steppers[axis]->dir = speed > 0 ? 1 : -1;  // направление
-        us = 1000000.0 / abs(speed);               // период
+        us = 1000000.0 / std::abs(speed);               // период
         us >>= shift;
         status = 5;
     }
@@ -404,12 +409,10 @@ class GPlanner2 {
     // пересчитать скорости
     void calculateBlock() {
         if (changeSett && bufV.get(0) == 0) {  // параметры движения изменились, а мы стоим
-            noInterrupts();
             uint8_t stBuf = status;
             status = 0;
             setMaxSpeed(nV);
             status = stBuf;
-            interrupts();
             changeSett = 0;
         }
 
@@ -437,7 +440,7 @@ class GPlanner2 {
                 if (cosa < -0.95) Vm = V;                   // пролетаем по прямой
                 else {
                     Vm = (float)a * dtA / sqrt(2.0 * (1 + cosa));  // считаем
-                    Vm = min(Vm, V);                               // на всякий случай ограничим
+                    Vm = fmin(Vm, V);                               // на всякий случай ограничим
                 }
                 bufV.set(i + 1, Vm);  // пишем в буфер
             }

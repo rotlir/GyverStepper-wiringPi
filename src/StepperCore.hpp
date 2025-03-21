@@ -38,9 +38,12 @@
 
 #ifndef _StepperCore_h
 #define _StepperCore_h
-#include <Arduino.h>
+#include <wiringPi.h>
 
-#include "GStypes.h"
+#include "GStypes.hpp"
+
+#include <cstdint>
+#include <cmath>
 
 #ifndef DRIVER_STEP_TIME
 #define DRIVER_STEP_TIME 4
@@ -52,6 +55,7 @@ template <GS_driverType _DRV, GS_driverType _TYPE = STEPPER_PINS>
 class Stepper {
    public:
     Stepper(uint8_t pin1 = 255, uint8_t pin2 = 255, uint8_t pin3 = 255, uint8_t pin4 = 255, uint8_t pin5 = 255) {
+        wiringPiSetupGpio();
         if (_TYPE == STEPPER_PINS) {
             if (_DRV == STEPPER2WIRE) {
                 configurePin(0, pin1);

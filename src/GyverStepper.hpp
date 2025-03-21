@@ -181,20 +181,27 @@ void attachPower(handler)
 
 #ifndef _GyverStepper_h
 #define _GyverStepper_h
-#include <Arduino.h>
+#include <wiringPi.h>
 
-#include "GStypes.h"
-#include "StepperCore.h"
+#include "GStypes.hpp"
+#include "StepperCore.hpp"
 
 // =========== МАКРОСЫ ===========
 #define degPerMinute(x) ((x) / 60.0f)
 #define degPerHour(x) ((x) / 3600.0f)
 #define _sign(x) ((x) >= 0 ? 1 : -1)  // знак числа
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 
 // =========== КОНСТАНТЫ ===========
 #define _MIN_SPEED_FP 5  // мин. скорость для движения в FOLLOW_POS с ускорением
 #define _MAX_PERIOD_FP (1000000L / _MIN_SPEED_FP)
 #define _MIN_STEP_SPEED (1.0 / 3600)  // мин. скорость 1 шаг в час
+
+// ported from Arduino.h
+inline long map(long x, long in_min, long in_max, long out_min, long out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 
 enum GS_runMode {
     FOLLOW_POS,
@@ -303,8 +310,8 @@ class GStepper : public Stepper<_DRV, _TYPE> {
 
     // установка максимальной скорости в шагах/секунду
     void setMaxSpeed(double speed) {
-        speed = abs(speed);
-        _maxSpeed = max(speed, _MIN_STEP_SPEED);  // 1 шаг в час минимум
+        speed = std::abs(speed);
+        _maxSpeed = fmax(speed, _MIN_STEP_SPEED);  // 1 шаг в час минимум
         // считаем stepTime для низких скоростей или отключенного ускорения
         if (_accel == 0 || _maxSpeed < _MIN_SPEED_FP) stepTime = 1000000.0 / _maxSpeed;
 
@@ -360,7 +367,7 @@ class GStepper : public Stepper<_DRV, _TYPE> {
                 _accelSpeed = 1000000.0f / stepTime * dir;
                 setTarget(pos + (float)_accelSpeed * _accelSpeed * _accelInv * dir);
                 // setMaxSpeed(abs(_accelSpeed));
-                _stopSpeed = abs(_accelSpeed);
+                _stopSpeed = std::abs(_accelSpeed);
 #ifdef SMOOTH_ALGORITHM
                 _n = (float)_accelSpeed * _accelSpeed * _accelInv;
 #endif
@@ -383,15 +390,15 @@ class GStepper : public Stepper<_DRV, _TYPE> {
         _stopF = (_speed == 0);
         if (_speed == 0 && _accelSpeed == 0) return;
         dir = (_speed > 0) ? 1 : -1;
-        if (abs(_speed) < _MIN_STEP_SPEED) _speed = _MIN_STEP_SPEED * dir;
+        if (std::abs(_speed) < _MIN_STEP_SPEED) _speed = _MIN_STEP_SPEED * dir;
 
         if (_accel != 0) {  // плавный старт
             if (_accelSpeed != _speed) {
-                int speed1 = (int)abs(_speed);
-                int speed2 = (int)abs(_accelSpeed);
-                _speedPlannerPrd = map(max(speed1, speed2), 1000, 20000, 15000, 2000);
+                int speed1 = (int)std::abs(_speed);
+                int speed2 = (int)std::abs(_accelSpeed);
+                _speedPlannerPrd = map(fmax(speed1, speed2), 1000, 20000, 15000, 2000);
                 _speedPlannerPrd = constrain(_speedPlannerPrd, 15000, 2000);
-                stepTime = abs(1000000.0 / _accelSpeed);
+                stepTime = std::abs(1000000.0 / _accelSpeed);
             }
         } else {               // резкий старт
             if (speed == 0) {  // скорость 0? Отключаемся и выходим
@@ -399,7 +406,7 @@ class GStepper : public Stepper<_DRV, _TYPE> {
                 return;
             }
             _accelSpeed = _speed;
-            stepTime = abs(1000000.0 / _speed);
+            stepTime = std::abs(1000000.0 / _speed);
         }
         enable();
     }
@@ -450,8 +457,8 @@ class GStepper : public Stepper<_DRV, _TYPE> {
     uint32_t getMinPeriod() {
         float curSpeed;
         if (_curMode == KEEP_SPEED) {
-            curSpeed = abs(_speed);
-            if (abs(_accelSpeed) > curSpeed) curSpeed = abs(_accelSpeed);
+            curSpeed = std::abs(_speed);
+            if (std::abs(_accelSpeed) > curSpeed) curSpeed = std::abs(_accelSpeed);
         } else curSpeed = _maxSpeed;
         return (1000000.0 / curSpeed);
     }
@@ -537,7 +544,7 @@ class GStepper : public Stepper<_DRV, _TYPE> {
             if (_stopSpeed == 0) _accelSpeed = constrain(_accelSpeed, -_maxSpeed, _maxSpeed);          // ограничение
             else _accelSpeed = constrain(_accelSpeed, -_stopSpeed, _stopSpeed);
 
-            if (abs(_accelSpeed) > _MIN_SPEED_FP) stepTime = abs(1000000.0 / _accelSpeed);  // ограничение на мин. скорость
+            if (std::abs(_accelSpeed) > _MIN_SPEED_FP) stepTime = std::abs(1000000.0 / _accelSpeed);  // ограничение на мин. скорость
             else stepTime = _MAX_PERIOD_FP;
             dir = _sign(_accelSpeed);  // направление для шагов
         }
@@ -558,8 +565,8 @@ class GStepper : public Stepper<_DRV, _TYPE> {
             _speedPlannerTime = tickUs;
             _accelSpeed += (_accelTime * _speedPlannerPrd * _sign(_speed - _accelSpeed));
             dir = _sign(_accelSpeed);
-            stepTime = abs(1000000.0 / _accelSpeed);
-            if (_stopF && abs(_accelSpeed) <= _MIN_STEP_SPEED) brake();
+            stepTime = std::abs(1000000.0 / _accelSpeed);
+            if (_stopF && std::abs(_accelSpeed) <= _MIN_STEP_SPEED) brake();
         }
     }
 
